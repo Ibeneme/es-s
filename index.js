@@ -21,6 +21,7 @@ app.use(cors());
 app.use(express.json()); // Parses JSON for all other routes
 
 // --- 3. DATABASE CONNECTION ---
+
 mongoose
   .connect(process.env.MONGODB_URI)
   .then(() => console.log("✨ Database Connected"))
