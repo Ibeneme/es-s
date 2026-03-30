@@ -1,80 +1,66 @@
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
-const Order = require("../models/Order");
-const Product = require("../models/Product");
+const Payment = require("../models/Payment"); // Path to your schema
 
-// --- 1. INITIATE PAYMENT INTENT ---
-exports.createPaymentIntent = async (req, res) => {
+/**
+ * @desc Get all payments with pagination for the Dashboard Table
+ */
+exports.getAllPayments = async (req, res) => {
   try {
-    const { items, shippingAddress, email } = req.body;
+    const { page = 1, limit = 10, status } = req.query;
+    const query = status ? { paymentStatus: status } : {};
 
-    // Calculate total on server-side to prevent price tampering
-    let total = 0;
-    for (const item of items) {
-      const product = await Product.findById(item.productId);
-      if (product) {
-        total += product.price * 100; // Stripe expects amounts in cents
-      }
-    }
+    const payments = await Payment.find(query)
+      .populate("orderId", "email items totalAmount") // Pull order details
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
 
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: total,
-      currency: "usd",
-      metadata: { 
-        email,
-        // Store address in metadata as a backup
-        street: shippingAddress.street,
-        city: shippingAddress.city,
-        country: shippingAddress.country
-      },
-      automatic_payment_methods: { enabled: true },
-    });
+    const count = await Payment.countDocuments(query);
 
     res.status(200).json({
-      clientSecret: paymentIntent.client_secret,
+      payments,
+      totalPages: Math.ceil(count / limit),
+      currentPage: page,
+      totalPayments: count,
     });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to retrieve archive.", error: err.message });
   }
 };
 
-// --- 2. STRIPE WEBHOOK (VALIDATE & CREATE ORDER) ---
-// This is the most secure way to create an order
-exports.handleStripeWebhook = async (req, res) => {
-  const sig = req.headers["stripe-signature"];
-  let event;
-
+/**
+ * @desc Get aggregated earnings and stats for Dashboard Cards
+ */
+exports.getEarningsStats = async (req, res) => {
   try {
-    event = stripe.webhooks.constructEvent(
-      req.body, 
-      sig, 
-      process.env.STRIPE_WEBHOOK_SECRET
-    );
-  } catch (err) {
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
+    const stats = await Payment.aggregate([
+      { $match: { paymentStatus: "paid" } },
+      {
+        $group: {
+          _id: null,
+          totalEarnings: { $sum: "$amountPaidNGN" },
+          totalTransactions: { $count: {} },
+          averageOrderValue: { $avg: "$amountPaidNGN" },
+        },
+      },
+    ]);
 
-  // Handle the successful payment event
-  if (event.type === "payment_intent.succeeded") {
-    const session = event.data.object;
+    // Get earnings grouped by month for a chart
+    const monthlyEarnings = await Payment.aggregate([
+      { $match: { paymentStatus: "paid" } },
+      {
+        $group: {
+          _id: { $month: "$paidAt" },
+          amount: { $sum: "$amountPaidNGN" },
+        },
+      },
+      { $sort: { "_id": 1 } }
+    ]);
 
-    // 1. Extract info from metadata
-    const { email, street, city, country } = session.metadata;
-    
-    // 2. Map items (You might pass item IDs through metadata or a custom DB lookup)
-    // For this example, we assume you've structured your checkout to handle this
-    
-    const newOrder = new Order({
-      userEmail: email,
-      stripePaymentIntentId: session.id,
-      totalAmount: session.amount / 100,
-      shippingAddress: { street, city, country },
-      paymentStatus: "paid",
-      status: "preparing" // Default status as requested
+    res.status(200).json({
+      summary: stats[0] || { totalEarnings: 0, totalTransactions: 0 },
+      chartData: monthlyEarnings,
     });
-
-    await newOrder.save();
-    console.log(`[STRIPE] Order created for ${email}`);
+  } catch (err) {
+    res.status(500).json({ message: "Analytics retrieval failed.", error: err.message });
   }
-
-  res.json({ received: true });
 };

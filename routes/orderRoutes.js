@@ -1,28 +1,33 @@
-const express = require("express");
-const router = express.Router();
-const orderController = require("../controllers/orderController");
-const { protectAdmin } = require("../middleware/auth"); // Your JWT/Admin protection middleware
+const router = require("express").Router();
+const {
+  createOrder,
+  getAllOrders,
+  getOrdersByEmail,
+  updateOrder,
+  deleteOrder,
+  verifyOrder, // Import the new verification controller
+  adminUpdateStatus
+} = require("../controllers/orderController");
 
+// --- PUBLIC / USER ROUTES ---
 
-router.get("/", orderController.getAdminOrders);
+// Initialize a new order and get Paystack checkout URL
+router.post("/", createOrder);
 
-// 2. Update Order Status (Fulfillment Action)
-// PATCH /api/orders/:id/status
-// Body: { "status": "dispatched" }
-router.patch("/:id/status", orderController.updateOrderStatus);
+router.get("/verify/:reference", verifyOrder);
 
-// 3. Get Single Order Details (Deep Dive)
-// GET /api/orders/:id
-router.get("/:id", async (req, res) => {
-  try {
-    const order = await Order.findById(req.params.id).populate(
-      "items.productId"
-    );
-    if (!order) return res.status(404).json({ message: "Order not found" });
-    res.json(order);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+// Get order history for a specific user
+router.get("/user/:email", getOrdersByEmail);
+
+// --- ADMIN / MANAGEMENT ROUTES ---
+
+// Fetch all orders for the admin dashboard
+router.get("/", getAllOrders);
+
+// Update order details (will regenerate checkout URL if unpaid)
+router.put("/:id", updateOrder);
+router.put("/admin/:id/status", adminUpdateStatus);
+// Remove an order from the archive
+router.delete("/:id", deleteOrder);
 
 module.exports = router;

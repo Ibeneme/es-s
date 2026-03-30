@@ -1,12 +1,12 @@
 const express = require("express");
 const router = express.Router();
 const paymentController = require("../controllers/paymentController");
+// const { protect, admin } = require("../middleware/authMiddleware"); // Optional protection
 
-router.post("/create-intent", paymentController.createPaymentIntent);
-router.post(
-  "/webhook",
-  express.raw({ type: "application/json" }),
-  paymentController.handleStripeWebhook
-);
+// Route for the Dashboard Cards / Analytics
+router.get("/stats", paymentController.getEarningsStats);
+
+// Route for the Detailed Table
+router.get("/all", paymentController.getAllPayments);
 
 module.exports = router;
