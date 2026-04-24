@@ -1,23 +1,39 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const multer = require('multer');
-const projectController = require('../controllers/projectController');
+const multer = require("multer");
+const {
+  createProject,
+  getProjects,
+  getProjectBySlug,
+  updateProject,
+  deleteProject,
+} = require("../controllers/projectController");
 
-// Configure Multer for Memory Storage
+// Multer Memory Storage Configuration
 const storage = multer.memoryStorage();
-const upload = multer({ 
-  storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+const upload = multer({
+  storage,
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
 });
 
-// Routes
-router.get('/', projectController.getProjects);
-router.get('/:slug', projectController.getProjectBySlug);
+/**
+ * DEFINE MULTI-FIELD UPLOAD
+ * 'image' -> The Hero/Cover image (max 1)
+ * 'images' -> The Project Gallery array (max 12)
+ */
+const portfolioUpload = upload.fields([
+  { name: "image", maxCount: 1 },
+  { name: "images", maxCount: 12 },
+]);
 
-// use upload.single('image') to intercept the 'image' field from FormData
-router.post('/', upload.single('image'), projectController.createProject);
-router.put('/:id', upload.single('image'), projectController.updateProject);
+// MAIN COLLECTION ROUTES
+router.route("/").get(getProjects).post(portfolioUpload, createProject);
 
-router.delete('/:id', projectController.deleteProject);
+// SPECIFIC PROJECT ROUTES
+router
+  .route("/:slug")
+  .get(getProjectBySlug)
+  .put(portfolioUpload, updateProject)
+  .delete(deleteProject);
 
 module.exports = router;
