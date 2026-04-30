@@ -21,7 +21,7 @@ const ProjectSchema = new mongoose.Schema(
 
     // Functional Links
     externalLink: { type: String }, // For the onClick/window.open logic
-
+    timeline: { type: String }, 
     // Metadata for SEO/High-Velocity Filtering
     isFeatured: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now },

