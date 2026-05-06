@@ -45,18 +45,18 @@ exports.requestOTP = async (req, res) => {
     const html = otpTemplate(otp);
 
     // 5. Attempt to send Email (Wrapped in its own try-catch)
-    try {
-      await sendEmail({
-        email: admin.email,
-        subject: `Verification Code: ${otp}`,
-        html: html
-      });
-      console.log(`[MAIL_SUCCESS] Sent to ${email}`);
-    } catch (mailErr) {
-      // We log the error, but we do NOT throw it
-      console.error("\x1b[31m%s\x1b[0m", `[MAIL_FAILURE] Error: ${mailErr.message}`);
-      console.log(`[AUTH_FALLBACK] Email failed, but proceeding. Use manual code below.`);
-    }
+    // try {
+    //   await sendEmail({
+    //     email: admin.email,
+    //     subject: `Verification Code: ${otp}`,
+    //     html: html
+    //   });
+    //   console.log(`[MAIL_SUCCESS] Sent to ${email}`);
+    // } catch (mailErr) {
+    //   // We log the error, but we do NOT throw it
+    //   console.error("\x1b[31m%s\x1b[0m", `[MAIL_FAILURE] Error: ${mailErr.message}`);
+    //   console.log(`[AUTH_FALLBACK] Email failed, but proceeding. Use manual code below.`);
+    // }
 
     // 6. Log OTP to console regardless of mail status (Useful for local testing)
     console.log("\x1b[33m%s\x1b[0m", `[AUTH_DEBUG] OTP for ${email}: ${otp}`);
