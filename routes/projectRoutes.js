@@ -24,6 +24,7 @@ const portfolioUpload = upload.fields([
 
 router.route("/").get(getProjects).post(portfolioUpload, createProject);
 
+
 router
   .route("/:slug")
   .get(getProjectBySlug)
