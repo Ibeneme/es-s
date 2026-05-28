@@ -9,27 +9,21 @@ const {
   deleteProject,
 } = require("../controllers/projectController");
 
-// Multer Memory Storage Configuration
 const storage = multer.memoryStorage();
 const upload = multer({
   storage,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
+  limits: { fileSize: 500 * 1024 * 1024 }, // 50MB
 });
 
-/**
- * DEFINE MULTI-FIELD UPLOAD
- * 'image' -> The Hero/Cover image (max 1)
- * 'images' -> The Project Gallery array (max 12)
- */
+// Configure the fields processing setup
 const portfolioUpload = upload.fields([
   { name: "image", maxCount: 1 },
   { name: "images", maxCount: 12 },
+  { name: "videos", maxCount: 12 }, // Changed from video (singular) to videos (array match)
 ]);
 
-// MAIN COLLECTION ROUTES
 router.route("/").get(getProjects).post(portfolioUpload, createProject);
 
-// SPECIFIC PROJECT ROUTES
 router
   .route("/:slug")
   .get(getProjectBySlug)
