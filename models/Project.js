@@ -6,8 +6,8 @@ const ProjectSchema = new mongoose.Schema(
     title: { type: String, required: true },
     slug: { type: String, required: true, unique: true },
     tag: { type: String, required: false },
-    industry: { type: String, required: true },
-    shortDescription: { type: String, required: true },
+    industry: { type: String, required: false },
+    shortDescription: { type: String, required: false },
 
     projectOverview: { type: String },
     process: { type: String },

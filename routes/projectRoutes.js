@@ -12,7 +12,7 @@ const {
 const storage = multer.memoryStorage();
 const upload = multer({
   storage,
-  limits: { fileSize: 500 * 1024 * 1024 }, // 50MB
+  limits: { fileSize: 100 * 1024 * 1024 }, // 50MB
 });
 
 // Configure the fields processing setup

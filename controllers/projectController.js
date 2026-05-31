@@ -99,7 +99,7 @@ exports.createProject = async (req, res) => {
       heroImageUrl = await uploadToBackblaze(
         heroFile.buffer,
         safeName,
-        `projects/${projectSlug}/hero`
+        `portfolio/${projectSlug}/hero`
       );
     }
 
@@ -113,7 +113,7 @@ exports.createProject = async (req, res) => {
         return uploadToBackblaze(
           file.buffer,
           safeName,
-          `projects/${projectSlug}/gallery`
+          `portfolio/${projectSlug}/gallery`
         );
       });
       galleryUrls = await Promise.all(galleryPromises);
@@ -133,7 +133,7 @@ exports.createProject = async (req, res) => {
         return uploadToBackblaze(
           file.buffer,
           safeName,
-          `projects/${projectSlug}/videos`
+          `portfolio/${projectSlug}/videos`
         );
       });
       videoUrls = await Promise.all(videoPromises);
@@ -247,7 +247,7 @@ exports.updateProject = async (req, res) => {
         return uploadToBackblaze(
           file.buffer,
           safeName,
-          `projects/${activeSlug}/gallery`
+          `portfolio/${activeSlug}/gallery`
         );
       });
       const newImages = await Promise.all(galleryPromises);
@@ -281,7 +281,7 @@ exports.updateProject = async (req, res) => {
         return uploadToBackblaze(
           file.buffer,
           safeName,
-          `projects/${activeSlug}/videos`
+          `portfolio/${activeSlug}/videos`
         );
       });
       const newVideos = await Promise.all(videoPromises);
