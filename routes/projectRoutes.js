@@ -18,8 +18,8 @@ const upload = multer({
 // Configure the fields processing setup
 const portfolioUpload = upload.fields([
   { name: "image", maxCount: 1 },
-  { name: "images", maxCount: 12 },
-  { name: "videos", maxCount: 12 }, // Changed from video (singular) to videos (array match)
+  { name: "images", maxCount: 30 },
+  { name: "videos", maxCount: 20 }, // Changed from video (singular) to videos (array match)
 ]);
 
 router.route("/").get(getProjects).post(portfolioUpload, createProject);

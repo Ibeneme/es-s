@@ -1,5 +1,9 @@
 const Project = require("../models/Project");
-const { uploadToBackblaze } = require("../utils/uploadToBackblaze");
+const {
+  uploadToBackblaze,
+  deleteFromBackblaze,
+} = require("../utils/uploadToBackblaze");
+const sharp = require("sharp");
 
 // @desc    Create new project
 exports.createProject = async (req, res) => {
@@ -212,18 +216,35 @@ exports.updateProject = async (req, res) => {
       return `${cleanBase}${ext}`;
     };
 
-    // 1. Process New Hero Image
+    // Inside your updateProject controller
     if (req.files && req.files["image"]) {
-      console.log("Replacing Cover image...");
+      // 1. Delete the old image if it exists
+      if (project.imageUrl) {
+        await deleteFromBackblaze(project.imageUrl);
+      }
+
+      // 2. Upload new image
       const heroFile = req.files["image"][0];
       const safeName = getSanitizedFilename(heroFile.originalname);
-
       updateData.imageUrl = await uploadToBackblaze(
         heroFile.buffer,
         safeName,
-        `projects/${activeSlug}/hero`
+        `portfolio/${activeSlug}/hero`
       );
     }
+
+    // // 1. Process New Hero Image
+    // if (req.files && req.files["image"]) {
+    //   console.log("Replacing Cover image...");
+    //   const heroFile = req.files["image"][0];
+    //   const safeName = getSanitizedFilename(heroFile.originalname);
+
+    //   updateData.imageUrl = await uploadToBackblaze(
+    //     heroFile.buffer,
+    //     safeName,
+    //     `projects/${activeSlug}/hero`
+    //   );
+    // }
 
     // 2. Process Gallery Images (Merge Retained + New)
     let finalImages = [];

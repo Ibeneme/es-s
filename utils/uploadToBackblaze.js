@@ -1,4 +1,5 @@
 const B2 = require("backblaze-b2");
+const sharp = require("sharp");
 
 const applicationKeyId = process.env.APPLICATION_KEY_ID;
 const applicationKey = process.env.APPLICATION_KEY;
@@ -9,48 +10,70 @@ async function uploadToBackblaze(fileBuffer, originalName, folder = "uploads") {
   console.log("➡️ uploadToBackblaze called");
 
   try {
-    const b2 = new B2({
-      applicationKeyId,
-      applicationKey,
-    });
+    // 1. Compress Image before upload
+    let finalBuffer = fileBuffer;
+    let fileName = originalName;
 
-    console.log("🔑 Authorizing B2...");
+    if (originalName.match(/\.(jpg|jpeg|png|webp|tiff)$/i)) {
+      console.log("🖼️ Compressing image...");
+      finalBuffer = await sharp(fileBuffer)
+        .resize({ width: 1200, withoutEnlargement: true })
+        .webp({ quality: 80 })
+        .toBuffer();
+
+      // Update extension to .webp
+      const baseName = originalName.replace(/\.[^/.]+$/, "");
+      fileName = `${baseName}.webp`;
+    }
+
+    const b2 = new B2({ applicationKeyId, applicationKey });
     await b2.authorize();
 
     const { data: uploadData } = await b2.getUploadUrl({ bucketId });
 
     const timestamp = Date.now();
-    const safeName = originalName.replace(/\s+/g, "_");
-    const fileName = `${folder}/${timestamp}_${safeName}`;
+    const safeName = fileName.replace(/\s+/g, "_");
+    const fullFileName = `${folder}/${timestamp}_${safeName}`;
 
-    console.log(`📦 Uploading ${fileName} to B2...`);
+    console.log(`📦 Uploading ${fullFileName} to B2...`);
     const { data: uploadedData } = await b2.uploadFile({
       uploadUrl: uploadData.uploadUrl,
       uploadAuthToken: uploadData.authorizationToken,
-      fileName,
-      data: fileBuffer,
+      fileName: fullFileName,
+      data: finalBuffer,
     });
 
-    console.log("✅ File uploaded successfully");
-
-    // 🔒 FIX: Generate a temporary download authorization token (e.g., valid for 86400 seconds = 1 day)
-    console.log("🎟️ Generating temporary download authorization token...");
+    console.log("🎟️ Generating download token...");
     const { data: authData } = await b2.getDownloadAuthorization({
       bucketId,
-      fileNamePrefix: fileName, 
-      validDurationInSeconds: 86400, // 24 hours
+      fileNamePrefix: fullFileName,
+      validDurationInSeconds: 86400,
     });
 
-    // Construct the authenticated download URL with the authorization token parameter appended
-    const downloadUrl = `https://f005.backblazeb2.com/file/${bucketName}/${uploadedData.fileName}?Authorization=${authData.authorizationToken}`;
-    
-    return downloadUrl;
+    return `https://f005.backblazeb2.com/file/${bucketName}/${uploadedData.fileName}?Authorization=${authData.authorizationToken}`;
   } catch (error) {
-    console.error("❌ B2 Upload Error:", error.response?.data || error);
-    throw new Error(
-      `Failed to upload file to Backblaze B2: ${error.message || error}`
-    );
+    console.error("❌ B2 Upload Error:", error);
+    throw new Error(`Failed to upload: ${error.message}`);
   }
 }
 
-module.exports = { uploadToBackblaze };
+async function deleteFromBackblaze(fileUrl) {
+  try {
+    const b2 = new B2({ applicationKeyId, applicationKey });
+    await b2.authorize();
+
+    const urlParts = new URL(fileUrl);
+    let fileName = decodeURIComponent(
+      urlParts.pathname.split(`/file/${bucketName}/`)[1]
+    );
+    fileName = fileName.split("?")[0];
+
+    console.log(`🗑️ Deleting from B2: ${fileName}`);
+    await b2.deleteFileVersion({ bucketId, fileName });
+    console.log("✅ File deleted successfully");
+  } catch (error) {
+    console.error("❌ B2 Deletion Error:", error);
+  }
+}
+
+module.exports = { uploadToBackblaze, deleteFromBackblaze };
